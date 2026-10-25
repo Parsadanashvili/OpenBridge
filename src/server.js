@@ -57,7 +57,7 @@ async function route(req, res) {
   }
   if (p === '/api/studio/templates') return json(res, 200, studio.templates);
   if (p === '/api/studio/banks') return json(res, 200, loadConfig().banks.map((b) => ({ id: b.id, name: b.name, simulated: !!b.simulated, enabled: b.enabled !== false })));
-  if ((sm = p.match(/^\/api\/studio\/([^/]+)\/(flows|connections)(?:\/([^/]+))?(?:\/(run|publish|unpublish))?$/))) {
+  if ((sm = p.match(/^\/api\/studio\/([^/]+)\/(flows|connections)(?:\/([^/]+))?(?:\/(run|publish|unpublish|mapping-preview))?$/))) {
     const [, tenant, kind, id, action] = sm;
     if (!studio.store.ok(tenant)) return json(res, 400, { error: 'invalid tenant slug (a-z, 0-9, -, 2-32 chars)' });
     if (kind === 'connections') {
@@ -71,6 +71,12 @@ async function route(req, res) {
     const flow = studio.store.getFlow(tenant, id);
     if (req.method === 'PUT' && !action) { const b = await readBody(req); if (!b) return json(res, 400, { error: 'invalid JSON' }); delete b.published; try { return json(res, 200, studio.store.saveFlow(tenant, { ...b, id })); } catch (e) { return json(res, e.status || 500, { error: e.message }); } }
     if (!flow) return json(res, 404, { error: 'flow not found' });
+    if (action === 'mapping-preview') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' });
+      const b = await readBody(req) || {};
+      try { return json(res, 200, studio.engine.previewMap(b.config, b.sources, b.params)); }
+      catch (e) { return json(res, 400, { error: e.message }); }
+    }
     if (req.method === 'DELETE') { studio.store.deleteFlow(tenant, id); return json(res, 200, { deleted: id }); }
     if (action === 'run') {
       if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' });

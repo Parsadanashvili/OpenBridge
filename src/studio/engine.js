@@ -29,7 +29,7 @@ const FN = {
   upper: (v) => (v == null ? null : String(v).toUpperCase()), lower: (v) => (v == null ? null : String(v).toLowerCase()),
   string: (v) => (v == null ? null : String(v)), abs: (v) => (v == null || isNaN(Number(v)) ? null : Math.abs(Number(v)).toFixed(2)),
 };
-const setPath = (o, p, v) => { const ks = p.split('.'); let c = o; ks.slice(0, -1).forEach((k) => { c = c[k] = c[k] || {}; }); c[ks.at(-1)] = v; };
+const setPath = (o, p, v) => { const ks = String(p || '').split('.'); if (ks.some((k) => !k || ['__proto__', 'prototype', 'constructor'].includes(k))) throw new Error('invalid output field path'); let c = o; ks.slice(0, -1).forEach((k) => { c = c[k] = Object.hasOwn(c, k) && c[k] && typeof c[k] === 'object' ? c[k] : {}; }); c[ks.at(-1)] = v; };
 
 // ---- trigger inputs: [{ name, type: string|number|integer|boolean|date|enum, required, default, values[], description }]
 // Legacy flows with config.params {k: default} are read as optional string inputs with those defaults.
@@ -159,7 +159,7 @@ async function execute(flow, { tenant, params: rawParams = {}, psuIp, captureDat
     const inspection = captureData ? {
       input: { sources: n.type === 'trigger'
         ? [{ node: null, type: 'parameters', ...outputPreview({ data: params }, 'trigger', undefined, previewBudget) }]
-        : edges.filter((e) => e.to === id && results[e.from]).map((e) => ({ node: e.from, type: nodes[e.from].type, ...outputPreview(results[e.from], nodes[e.from].type, undefined, previewBudget) })) },
+        : edges.filter((e) => e.to === id && results[e.from]).map((e) => ({ node: e.from, type: nodes[e.from].type, bank: results[e.from].meta?.bank, ...outputPreview(results[e.from], nodes[e.from].type, undefined, previewBudget) })) },
       parameters: snapshot(n.config || {}, previewBudget),
     } : undefined;
     const items = () => inputs.flatMap((i) => (Array.isArray(i.items) ? i.items : []));
@@ -206,4 +206,16 @@ async function execute(flow, { tenant, params: rawParams = {}, psuIp, captureDat
     trace,
   };
 }
-module.exports = { execute, get, FN, inputSpec, resolveInputs, interpolate };
+function previewMap(config, sources = [], params = {}) {
+  if (!Array.isArray(config?.fields) || config.fields.length > 100 || !Array.isArray(sources) || sources.length > 10) throw new Error('mapping preview supports up to 100 fields and 10 sources');
+  const budget = { remaining: 256 * 1024 }, missing = [];
+  const inputs = sources.map((source) => {
+    const value = snapshot(source.preview?.value, budget).value;
+    return { ...(source.kind === 'items' ? { items: value } : { data: value }), meta: { bank: source.bank } };
+  });
+  const resolved = interpolate(config, params);
+  const samples = inputs.map((input, i) => ({ node: sources[i].node, rows: (Array.isArray(input.items) ? input.items : get(input.data, resolved.path) || []).slice(0, 10) }));
+  const items = mapNode({ id: 'preview', config: resolved }, inputs, missing);
+  return { output: snapshot(items), missing: missing.slice(0, 100), samples: snapshot(samples).value, count: items.length };
+}
+module.exports = { execute, get, FN, inputSpec, resolveInputs, interpolate, previewMap };

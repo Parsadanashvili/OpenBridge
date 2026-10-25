@@ -595,7 +595,7 @@ function StudioWorkspace() {
 
   useEffect(() => {
     const handler = (e) => {
-      if (modal) return;
+      if (modal || document.querySelector("dialog[open]")) return;
       if (!(e.metaKey || e.ctrlKey)) return;
       if (e.key.toLowerCase() === "s") {
         e.preventDefault();
@@ -1165,6 +1165,8 @@ function StudioWorkspace() {
                   disabled={busy || saving}
                   onRun={execute}
                   notify={notify}
+                  mappingEndpoint={`${base}/flows/${flow.id}/mapping-preview`}
+                  executionParams={result?.meta?.inputs}
                   onClose={() => setSelected(null)}
                   onChange={(config) => {
                     if (busy || saving) return;

@@ -12,6 +12,7 @@ import {
 import { Button, Field, IconButton } from "../components/ui";
 import { inputSpec, typeInfo } from "./model";
 import NodeDataPanel from "./NodeDataPanel";
+import MappingEditor from "./MappingEditor";
 
 function Text({ label, value, onChange, hint, ...props }) {
   return (
@@ -51,7 +52,10 @@ export default function Inspector({
   disabled,
   onRun,
   notify,
+  mappingEndpoint,
+  executionParams,
 }) {
+  const [mappingOpen, setMappingOpen] = useState(false);
   const [tab, setTab] = useState("parameters");
   const [editor, setEditor] = useState("form");
   const [raw, setRaw] = useState("");
@@ -66,6 +70,7 @@ export default function Inspector({
   useEffect(() => {
     setTab("parameters");
     setEditor("form");
+    setMappingOpen(false);
   }, [node.id]);
   const patch = (key, value) => onChange({ ...config, [key]: value });
   const checkbox = (key, title, defaultValue = false) => (
@@ -372,6 +377,16 @@ export default function Inspector({
                   )}
                   {node.data.kind === "map" && (
                     <>
+                      <Button
+                        icon={Braces}
+                        onClick={() => setMappingOpen(true)}
+                        disabled={disabled}
+                      >
+                        Visual mapping
+                      </Button>
+                      <p className="node-data-caption">
+                        Choose source fields and preview their mapped values.
+                      </p>
                       {field(
                         "path",
                         "Source collection",
@@ -593,6 +608,24 @@ export default function Inspector({
         </Button>
         <span className="muted">Changes are local until saved</span>
       </div>
+      {mappingOpen && (
+        <MappingEditor
+          config={config}
+          sources={execution?.inspection?.input?.sources || []}
+          params={executionParams || {}}
+          endpoint={mappingEndpoint}
+          stale={stale}
+          disabled={disabled}
+          onClose={() => setMappingOpen(false)}
+          onApply={(next) => {
+            onChange(next);
+            setMappingOpen(false);
+            notify(
+              "Mappings applied. Execute the workflow to verify the full result.",
+            );
+          }}
+        />
+      )}
     </aside>
   );
 }
