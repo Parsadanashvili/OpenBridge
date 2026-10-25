@@ -52,6 +52,10 @@ button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+.button[aria-busy="true"] {
+  opacity: 1;
+  cursor: wait;
+}
 button {
   color: inherit;
 }
@@ -135,13 +139,38 @@ svg {
 .warning-text {
   color: var(--coral);
 }
-.spin {
-  animation: spin 1s linear infinite;
+.loading-ring {
+  position: relative;
+  display: inline-block;
+  inline-size: var(--loading-size, 16px);
+  block-size: var(--loading-size, 16px);
+  flex-shrink: 0;
+  vertical-align: middle;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.loading-ring > span[aria-hidden="true"] {
+  position: absolute;
+  border: 2px solid currentColor;
+  border-radius: 50%;
+}
+.loading-ring > span[aria-hidden="true"]:first-child {
+  inset: 0;
+}
+.loading-ring > span[aria-hidden="true"]:nth-child(2) {
+  top: 50%;
+  left: 50%;
+  border-color: transparent;
+  border-bottom-color: currentColor;
+}
+.loading-ring > .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 .brand {
   display: flex;
@@ -886,8 +915,22 @@ svg {
     0 0 0 2px #ff806e28,
     0 5px 15px #0002;
 }
+.workflow-node.node-success {
+  border-color: var(--green);
+  box-shadow:
+    0 0 0 1px #83c6a030,
+    0 0 18px #83c6a026;
+}
 .workflow-node.node-error {
-  border-color: #b45c5c;
+  border-color: var(--red);
+  box-shadow:
+    0 0 0 1px #f3939338,
+    0 0 18px #f3939330;
+}
+.workflow-node.node-success.selected,
+.workflow-node.node-error.selected {
+  outline: 1px solid var(--muted);
+  outline-offset: 4px;
 }
 .node-topline {
   display: flex;
@@ -1390,18 +1433,6 @@ svg {
   font-size: 10px;
   min-height: 29px;
   margin-top: 8px;
-}
-.live-dot {
-  width: 5px;
-  height: 5px;
-  background: var(--coral);
-  border-radius: 50%;
-  animation: blink 1s ease-in-out infinite;
-}
-@keyframes blink {
-  50% {
-    opacity: 0.25;
-  }
 }
 .result-toolbar {
   position: sticky;
@@ -2693,7 +2724,7 @@ svg {
   .execution-tabs > button svg {
     width: 11px;
   }
-  .execution-status > span:not(.live-dot),
+  .execution-status > span:not(.loading-ring),
   .execution-status > svg {
     display: none;
   }
@@ -2961,6 +2992,12 @@ svg {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+  /* Pending-state feedback must remain visibly active. Keep the loading ring
+     moving gently while reducing nonessential motion elsewhere. */
+  .loading-ring {
+    animation-duration: 2s !important;
+    animation-iteration-count: infinite !important;
   }
 }
 /* Keep the diagram controls consistent when React Flow's CSS loads lazily. */

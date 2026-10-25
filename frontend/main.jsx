@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from "react";
 import { createRoot } from "react-dom/client";
 import { ErrorBoundary } from "./components/ui";
+import { LoadingIndicator } from "./components/LoadingIndicator";
 import "./styles.css";
 
 const Studio = lazy(() => import("./studio/Studio"));
@@ -16,7 +17,12 @@ createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ErrorBoundary>
       <Suspense
-        fallback={<div className="app-loading">Opening OpenBridge…</div>}
+        fallback={
+          <div className="app-loading" role="status">
+            <LoadingIndicator size={32} />
+            <span>Opening OpenBridge…</span>
+          </div>
+        }
       >
         {isStudio ? <Studio /> : <Console />}
       </Suspense>

@@ -9,7 +9,6 @@ import {
   FileCheck2,
   Gauge,
   LayoutDashboard,
-  Loader2,
   Play,
   Search,
   ShieldCheck,
@@ -17,6 +16,7 @@ import {
   Workflow,
 } from "lucide-react";
 import { api, send } from "../api";
+import { LoadingIndicator } from "../components/LoadingIndicator";
 import {
   Badge,
   Brand,
@@ -466,8 +466,8 @@ function Reports({ run, notify }) {
   if (error) return <Empty title="Reports are unavailable">{error}</Empty>;
   if (!data)
     return (
-      <div className="section-loading">
-        <Loader2 size={20} className="spin" />
+      <div className="section-loading" role="status">
+        <LoadingIndicator size={22} />
         Loading reports…
       </div>
     );
@@ -892,7 +892,7 @@ export default function Console() {
           </div>
           {running && (
             <div className="audit-progress" role="status">
-              <Loader2 className="spin" size={16} />
+              <LoadingIndicator size={18} />
               <span>{progress.at(-1)?.m || "Starting audit…"}</span>
               <span className="muted">{progress.length} steps</span>
             </div>
@@ -904,8 +904,8 @@ export default function Console() {
             </div>
           )}
           {loading ? (
-            <div className="section-loading">
-              <Loader2 className="spin" size={21} />
+            <div className="section-loading" role="status">
+              <LoadingIndicator size={24} />
               Loading audit results…
             </div>
           ) : tab === "overview" ? (

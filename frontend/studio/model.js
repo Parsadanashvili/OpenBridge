@@ -142,7 +142,7 @@ export const toEdges = (flow) =>
     id: `edge-${e.from}-${e.to}-${i}`,
     source: e.from,
     target: e.to,
-    type: "smoothstep",
+    type: "default",
   }));
 export function serialize(flow, nodes, edges) {
   return {

@@ -3,6 +3,7 @@ import {
   ReactFlow,
   Background,
   Controls,
+  ConnectionLineType,
   MiniMap,
   Handle,
   Position,
@@ -25,7 +26,6 @@ import {
   Globe,
   Landmark,
   LayoutGrid,
-  Loader2,
   MoreHorizontal,
   Play,
   Plus,
@@ -39,6 +39,7 @@ import {
 } from "lucide-react";
 import "@xyflow/react/dist/style.css";
 import { api, clone, send } from "../api";
+import { LoadingIndicator } from "../components/LoadingIndicator";
 import {
   Badge,
   Brand,
@@ -68,13 +69,21 @@ function WorkflowNode({ id, data, selected }) {
   const info = typeInfo(data.kind),
     Icon = info.icon;
   const status = data.execution;
+  const executionState = status?.skipped
+    ? "skipped"
+    : status?.ok === true
+      ? "success"
+      : status?.ok === false
+        ? "error"
+        : "idle";
   const title =
     data.kind === "bank"
       ? `${data.config.bank ? data.config.bank[0].toUpperCase() + data.config.bank.slice(1) : "Bank"} Bank`
       : info.title;
   return (
     <div
-      className={`workflow-node ${selected ? "selected" : ""} ${status && !status.ok ? "node-error" : ""}`}
+      className={`workflow-node ${selected ? "selected" : ""} ${executionState === "success" ? "node-success" : executionState === "error" ? "node-error" : ""}`}
+      data-execution-status={executionState}
     >
       {data.kind !== "trigger" && (
         <Handle type="target" position={Position.Left} />
@@ -95,7 +104,11 @@ function WorkflowNode({ id, data, selected }) {
         {status && (
           <span
             className={`node-run-dot ${status.skipped ? "skipped" : status.ok ? "success" : "failed"}`}
-            title={status.skipped || status.error || "Executed"}
+            title={
+              status.skipped ||
+              status.error ||
+              (status.ok ? "Execution succeeded" : "Execution failed")
+            }
           >
             {status.ok ? <Check size={11} /> : <X size={11} />}
           </span>
@@ -538,6 +551,7 @@ function StudioWorkspace() {
       return;
     }
     setBusy(true);
+    setResult(null);
     setRunError(null);
     setExpanded(true);
     setExecutionTab("output");
@@ -671,7 +685,7 @@ function StudioWorkspace() {
   const onConnect = (connection) => {
     if (busy || saving || !validConnection(connection)) return;
     remember();
-    setEdges((list) => addEdge({ ...connection, type: "smoothstep" }, list));
+    setEdges((list) => addEdge({ ...connection, type: "default" }, list));
   };
   const arrangeNodes = () => {
     remember();
@@ -693,7 +707,8 @@ function StudioWorkspace() {
     selected: n.id === selected,
     data: {
       ...n.data,
-      execution: !stale ? result?.trace.find((t) => t.node === n.id) : null,
+      execution:
+        !busy && !stale ? result?.trace.find((t) => t.node === n.id) : null,
     },
   }));
   const specs = inputSpec(current);
@@ -856,9 +871,12 @@ function StudioWorkspace() {
           />
           <Breadcrumbs items={["Workspace", "Workflows"]} />
           <span className="header-spacer" />
-          <span className={`save-state ${dirty ? "unsaved" : ""}`}>
+          <span
+            className={`save-state ${dirty ? "unsaved" : ""}`}
+            role={saving ? "status" : undefined}
+          >
             {saving ? (
-              <Loader2 size={13} className="spin" />
+              <LoadingIndicator size={14} />
             ) : dirty ? (
               <span className="unsaved-dot" />
             ) : (
@@ -996,9 +1014,10 @@ function StudioWorkspace() {
                 fitView
                 fitViewOptions={{ padding: 0.16, maxZoom: 1 }}
                 defaultEdgeOptions={{
-                  type: "smoothstep",
+                  type: "default",
                   style: { strokeWidth: 1.5 },
                 }}
+                connectionLineType={ConnectionLineType.Bezier}
                 connectionLineStyle={{ stroke: "#ff7866", strokeWidth: 2 }}
                 snapToGrid
                 snapGrid={[16, 16]}
@@ -1055,10 +1074,13 @@ function StudioWorkspace() {
                 <span>Connect the dots</span>
               </div>
               {(loading || loadError || !flow) && (
-                <div className="canvas-overlay">
+                <div
+                  className="canvas-overlay"
+                  role={loading ? "status" : undefined}
+                >
                   {loading ? (
                     <>
-                      <Loader2 className="spin" size={26} />
+                      <LoadingIndicator size={32} />
                       <p>Loading your workspace…</p>
                     </>
                   ) : loadError ? (

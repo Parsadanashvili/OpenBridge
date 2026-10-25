@@ -6,6 +6,9 @@ export default defineConfig({
   root: "frontend",
   publicDir: false,
   plugins: [react()],
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./frontend", import.meta.url)) },
+  },
   server: {
     host: "127.0.0.1",
     proxy: {

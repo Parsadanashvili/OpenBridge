@@ -124,6 +124,12 @@ test("execution uses real simulator APIs and exposes output, issues and node tra
   await expect(
     page.getByText("Workflow executed successfully", { exact: true }),
   ).toBeVisible({ timeout: 30000 });
+  await expect(page.locator(".workflow-node.node-success")).toHaveCount(7);
+  await expect(page.locator(".workflow-node.node-error")).toHaveCount(0);
+  await expect(node(page, "alpha").locator(".workflow-node")).toHaveCSS(
+    "border-top-color",
+    "rgb(131, 198, 160)",
+  );
   await expect(page.locator(".execution-body table")).toContainText(
     "accountId",
   );
@@ -140,11 +146,70 @@ test("execution uses real simulator APIs and exposes output, issues and node tra
     page.getByText("Missing: availableBalance").first(),
   ).toBeVisible();
   await node(page, "alpha").click();
+  await expect(node(page, "alpha").locator(".workflow-node")).toHaveCSS(
+    "border-top-color",
+    "rgb(131, 198, 160)",
+  );
   await page.getByLabel("Operation", { exact: true }).selectOption("balances");
   await expect(
     page.getByText(/Workflow changed since the last execution/),
   ).toBeVisible();
+  await expect(
+    page.locator(".workflow-node.node-success, .workflow-node.node-error"),
+  ).toHaveCount(0);
   expect(errors).toEqual([]);
+});
+
+test("a failed node glows red while successful nodes stay green, and rerunning clears old borders", async ({
+  page,
+}) => {
+  await page.goto(studio("node-errors"));
+  await node(page, "alpha").click();
+  await page.getByRole("button", { name: "JSON", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "Node configuration JSON" })
+    .fill(JSON.stringify({ bank: "alpha", op: "invalid-operation" }));
+  await page.getByRole("button", { name: "Apply JSON", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Execute workflow", exact: true })
+    .first()
+    .click();
+  const alpha = node(page, "alpha").locator(".workflow-node");
+  const beta = node(page, "beta").locator(".workflow-node");
+  await expect(alpha).toHaveAttribute("data-execution-status", "error", {
+    timeout: 30000,
+  });
+  await expect(alpha).toHaveCSS("border-top-color", "rgb(243, 147, 147)");
+  await expect(beta).toHaveAttribute("data-execution-status", "success");
+  await expect(beta).toHaveCSS("border-top-color", "rgb(131, 198, 160)");
+  await expect(page.locator(".workflow-node.node-error")).toHaveCount(1);
+
+  let resume;
+  const pending = new Promise((resolve) => {
+    resume = resolve;
+  });
+  await page.route(
+    "**/api/studio/ui-node-errors/flows/unified-accounts/run",
+    async (route) => {
+      await pending;
+      await route.continue();
+    },
+  );
+  await page
+    .getByRole("button", { name: "Execute workflow", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Executing…", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator(".workflow-node.node-success, .workflow-node.node-error"),
+  ).toHaveCount(0);
+  resume();
+  await expect(alpha).toHaveAttribute("data-execution-status", "error", {
+    timeout: 30000,
+  });
+  await expect(beta).toHaveAttribute("data-execution-status", "success");
 });
 
 test("a disconnected graph is rejected before any bank execution", async ({

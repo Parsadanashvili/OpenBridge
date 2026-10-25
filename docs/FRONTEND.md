@@ -72,6 +72,8 @@ The acceptance suite covers loading/saving legacy graph data, graph movement and
 
 The studio uses a charcoal workspace, coral primary actions, a dotted canvas and functional node colors. Details appear in a side panel; execution data opens below the graph. Reduced-motion preferences are respected, dialogs use native focus containment, and form controls have explicit labels.
 
+All pending states use Loading UI's `ConcentricRing`, installed with `npx shadcn@latest add @loading-ui/concentric-ring`. `components/LoadingIndicator.jsx` standardizes sizes and accessibility for buttons, audit progress, page loading and workflow execution. Scoped rules in `styles.css` supply the component's utility styles without adding Tailwind's global reset; the registry component merges caller styles with its rotation animation. With reduced motion enabled, the ring rotates gently once every two seconds so pending operations still look active; nonessential animations remain reduced. The shadcn import alias is configured in `jsconfig.json` and Vite.
+
 This remains the existing hackathon demo: the role cookie and tenant slug are not authentication; real-bank access, token storage, rounding rules and backend security limitations have not been redesigned by this frontend migration.
 
 Implementation references: [React Flow custom nodes](https://reactflow.dev/learn/customization/custom-nodes), [Vite backend integration](https://vite.dev/guide/backend-integration.html).

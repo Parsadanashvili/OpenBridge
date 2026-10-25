@@ -13,6 +13,7 @@ import {
   Table2,
 } from "lucide-react";
 import { Badge, Button, Empty, Field, IconButton } from "../components/ui";
+import { LoadingIndicator } from "../components/LoadingIndicator";
 
 function InputFields({ specs, params, setParams }) {
   if (!specs.length)
@@ -162,10 +163,10 @@ export default function ExecutionPanel({
             </button>
           ))}
         </div>
-        <div className="execution-status">
+        <div className="execution-status" role={busy ? "status" : undefined}>
           {busy ? (
             <>
-              <span className="live-dot" />
+              <LoadingIndicator size={14} />
               Executing workflow…
             </>
           ) : result ? (
@@ -209,7 +210,7 @@ export default function ExecutionPanel({
           {tab === "output" &&
             (!result ? (
               <Empty
-                icon={Play}
+                icon={busy ? LoadingIndicator : Play}
                 title={busy ? "Your workflow is running" : "Ready when you are"}
                 action={
                   !busy && (

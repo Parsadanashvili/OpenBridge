@@ -6,14 +6,8 @@ import {
   useId,
   useRef,
 } from "react";
-import {
-  Activity,
-  ArrowUpRight,
-  Check,
-  ChevronRight,
-  Loader2,
-  X,
-} from "lucide-react";
+import { Activity, ArrowUpRight, Check, ChevronRight, X } from "lucide-react";
+import { LoadingIndicator } from "./LoadingIndicator";
 
 export function Brand({ compact = false }) {
   return (
@@ -47,12 +41,9 @@ export function Button({
       className={`button ${variant} ${className}`}
       {...props}
       disabled={props.disabled || loading}
+      aria-busy={loading || undefined}
     >
-      {loading ? (
-        <Loader2 size={15} className="spin" />
-      ) : (
-        Icon && <Icon size={15} />
-      )}
+      {loading ? <LoadingIndicator size={15} /> : Icon && <Icon size={15} />}
       {children}
     </button>
   );
