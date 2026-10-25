@@ -4,7 +4,14 @@
   "private": true,
   "description": "OpenBridge AI - Open Banking interoperability & API quality auditor (hackathon MVP)",
   "scripts": {
+    "prestart": "npm run build",
     "start": "node src/server.js",
+    "start:api": "node src/server.js",
+    "dev": "vite",
+    "build": "vite build",
+    "test:ui": "playwright test",
+    "test:isolated": "node scripts/ui-test-server.js --selftest",
+    "format": "prettier --write frontend tests/ui vite.config.mjs playwright.config.cjs scripts/ui-test-server.js",
     "audit": "node scripts/audit.js",
     "test": "node scripts/selftest.js",
     "dataset": "node scripts/dataset.js",
@@ -13,9 +20,19 @@
     "rulebook": "node scripts/rulebook.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "^20.19.0 || >=22.12.0"
   },
   "dependencies": {
+    "@xyflow/react": "^12.12.0",
+    "lucide-react": "^1.61.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "yaml": "^2.5.1"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@vitejs/plugin-react": "^6.1.2",
+    "prettier": "^3.9.10",
+    "vite": "^8.3.5"
   }
 }

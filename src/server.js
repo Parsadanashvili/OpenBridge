@@ -19,8 +19,8 @@ const { docAuditMd } = require('./docaudit/report');
 let docCache = null;
 
 const PORT = process.env.PORT || 4000;
-const PUB = path.join(__dirname, '..', 'public');
-const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css' };
+const PUB = path.join(__dirname, '..', 'dist');
+const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' };
 let running = false, progress = [];
 
 const json = (res, code, body) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
@@ -125,8 +125,8 @@ async function route(req, res) {
     }
   }
   // static
-  const file = path.join(PUB, p === '/' ? 'index.html' : p);
-  if (file.startsWith(PUB) && fs.existsSync(file) && fs.statSync(file).isFile()) return text(res, MIME[path.extname(file)] || 'text/plain', fs.readFileSync(file));
+  const file = path.resolve(PUB, `.${p}`);
+  if (file.startsWith(PUB + path.sep) && fs.existsSync(file) && fs.statSync(file).isFile()) return text(res, MIME[path.extname(file)] || 'text/plain', fs.readFileSync(file));
   json(res, 404, { error: 'not found' });
 }
 
