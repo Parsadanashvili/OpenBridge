@@ -11,6 +11,8 @@
     "build": "vite build",
     "test:ui": "playwright test",
     "test:isolated": "node scripts/ui-test-server.js --selftest",
+    "test:inspection": "node --test tests/studio-inspection.test.cjs",
+    "test:history": "node --test tests/studio-history.test.cjs",
     "format": "prettier --write frontend tests/ui vite.config.mjs playwright.config.cjs scripts/ui-test-server.js",
     "audit": "node scripts/audit.js",
     "test": "node scripts/selftest.js",

@@ -64,6 +64,7 @@ import {
 } from "./model";
 import Inspector from "./Inspector";
 import ExecutionPanel from "./ExecutionPanel";
+import ExecutionHistory from "./ExecutionHistory";
 
 function WorkflowNode({ id, data, selected }) {
   const info = typeInfo(data.kind),
@@ -342,6 +343,7 @@ function StudioWorkspace() {
     [busy, setBusy] = useState(false),
     [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null),
+    [historyView, setHistoryView] = useState(null),
     [runError, setRunError] = useState(null),
     [params, setParams] = useState({});
   const [executionTab, setExecutionTab] = useState("output"),
@@ -389,6 +391,7 @@ function StudioWorkspace() {
       setLibrary(false);
       setDirty(draft);
       setResult(null);
+      setHistoryView(null);
       setRunError(null);
       setParams({});
       setSidebarOpen(false);
@@ -552,6 +555,7 @@ function StudioWorkspace() {
     }
     setBusy(true);
     setResult(null);
+    setHistoryView(null);
     setRunError(null);
     setExpanded(true);
     setExecutionTab("output");
@@ -935,10 +939,9 @@ function StudioWorkspace() {
             <button
               className={workspaceTab === "executions" ? "active" : ""}
               onClick={() => {
-                setWorkspaceTab("executions");
-                setExpanded(true);
-                setExecutionTab("logs");
+                setModal("history");
               }}
+              disabled={!flow?.version || busy || saving}
             >
               Execution
             </button>
@@ -1117,6 +1120,17 @@ function StudioWorkspace() {
                 refresh the output.
               </div>
             )}
+            {historyView && (
+              <div className="saved-execution-notice">
+                Saved execution ·{" "}
+                {new Date(historyView.startedAt).toLocaleString()} · v
+                {historyView.version}.{" "}
+                {historyView.outputPreview.truncated
+                  ? "Limited response preview. "
+                  : ""}
+                Recognized credentials are redacted.
+              </div>
+            )}
             <ExecutionPanel
               result={result}
               error={runError}
@@ -1139,10 +1153,18 @@ function StudioWorkspace() {
             <NodeLibrary onAdd={addNode} onClose={() => setLibrary(false)} />
           ) : (
             selectedNode && (
-              <div className={busy || saving ? "inspector-lock" : ""}>
+              <div>
                 <Inspector
                   node={selectedNode}
                   banks={banks}
+                  execution={result?.trace.find(
+                    (entry) => entry.node === selectedNode.id,
+                  )}
+                  stale={!!stale}
+                  busy={busy}
+                  disabled={busy || saving}
+                  onRun={execute}
+                  notify={notify}
                   onClose={() => setSelected(null)}
                   onChange={(config) => {
                     if (busy || saving) return;
@@ -1187,6 +1209,26 @@ function StudioWorkspace() {
           </span>
         </footer>
       </main>
+      {modal === "history" && flow && (
+        <ExecutionHistory
+          base={base}
+          flow={flow}
+          onClose={() => setModal(null)}
+          onOpen={(record) => {
+            setResult(record.result);
+            setHistoryView(record);
+            lastExecuted.current = fingerprint(record.flow);
+            setRunError(record.error ? new Error(record.error) : null);
+            setExpanded(true);
+            setExecutionTab("output");
+            setWorkspaceTab("editor");
+            setModal(null);
+            notify(
+              `Viewing saved execution from ${new Date(record.startedAt).toLocaleString()}${record.outputPreview.truncated ? " · limited output preview" : ""}`,
+            );
+          }}
+        />
+      )}
       {modal === "new" && (
         <NewFlow
           templates={templates}

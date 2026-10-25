@@ -242,7 +242,10 @@ test("publish, call and unpublish a workflow endpoint", async ({
   await expect(page.getByText("Live endpoint", { exact: true })).toBeVisible();
   const response = await request.get("/t/ui-publish/accounts");
   expect(response.status()).toBe(200);
-  expect((await response.json()).data.accounts.length).toBeGreaterThan(0);
+  const payload = await response.json();
+  expect(payload.data.accounts.length).toBeGreaterThan(0);
+  expect(payload).not.toHaveProperty("trace");
+  expect(JSON.stringify(payload)).not.toContain('"inspection"');
   await page.getByRole("button", { name: "Unpublish", exact: true }).click();
   await expect(page.getByText("Live endpoint", { exact: true })).toHaveCount(0);
   expect((await request.get("/t/ui-publish/accounts")).status()).toBe(404);

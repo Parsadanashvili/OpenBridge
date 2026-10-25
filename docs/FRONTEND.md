@@ -34,7 +34,9 @@ OPENBRIDGE_API_URL=http://127.0.0.1:4500 npm run dev
 | `studio/Studio.jsx` | Workspace state, graph editing, persistence, connections and publishing |
 | `studio/model.js` | Node catalog, graph adapters, layout and editor validation |
 | `studio/Inspector.jsx` | Structured parameters and advanced JSON configuration |
+| `studio/NodeDataPanel.jsx` | Per-node incoming sources, JSON/table output previews and copying |
 | `studio/ExecutionPanel.jsx` | Runtime inputs, output table/JSON, traces and issues |
+| `studio/ExecutionHistory.jsx` | Saved Studio runs, comparison baselines and historical inspection |
 | `console/Console.jsx` | Audit progress, findings, documents, coverage, reports and manual evidence |
 
 ## Flow compatibility
@@ -54,7 +56,15 @@ The `toNodes`, `toEdges` and `serialize` adapters are the boundary. Existing sav
 
 Edits remain local until saved. Switching workflows or leaving the page with unsaved changes prompts the user. Execution saves the graph first so its stored version matches the requested run. Output from an older graph remains visible with a stale-result notice after edits. The client rejects disconnected graphs and cycles before execution/publishing; backend validation remains necessary for callers bypassing the editor.
 
-Undo/redo history is local to the current editing session, capped at 80 snapshots. The execution panel shows the most recent run; it does not imply persistent execution history or rollback support.
+Undo/redo history is local to the current editing session, capped at 80 snapshots. The execution panel shows the current run or a saved run explicitly opened from Execution history. Opening a historical result never replaces the current graph and does not provide rollback.
+
+The Execution tab opens persistent history for the current workflow, retaining the latest 20 Studio runs (including failed nodes and input-validation failures) in `data/tenants/<tenant>/executions/<flow>/`. Public endpoint calls and runs made before this feature are not recorded. Each run includes timestamps, duration, version, node statuses/counts, redacted flow configuration and bounded result previews. Files are written atomically with owner-only file permissions. These are local JSON files under the existing demo tenant boundary, not a production access-control system.
+
+The default baseline is the previous successful run; any other retained run can be selected. Comparison shows node additions/removals, status/count changes, preview data changes and before/after duration. Final response hashes cover the full response with object keys sorted, excluding runtime metadata such as generation time; node hashes cover captured previews. Identical previews can therefore coexist with a changed full response. The UI labels the difference and explicitly marks shortened output. Saved runs remain available after reload/restart; node previews can be opened in the existing inspector. `npm run test:history` verifies isolation, retention, persistence, redaction and comparison.
+
+The node inspector has Input, Parameters and Output tabs. Input separates incoming connections; Output shows the actual node payload (including the final endpoint response for Respond). Parameters retains form/JSON editing and shows the resolved configuration used by the last run. Data appears when execution completes; edits mark existing previews stale and a new execution clears them.
+
+Only Studio runs opt into `captureData`. The engine captures detached previews without changing execution inputs or final responses. `src/studio/inspection.js` caps each collection at 50 entries, each object at 100 keys, strings at 2,000 characters, nesting at 12 levels, each snapshot at approximately 64 KiB and the run at approximately 1 MiB. Truncation and omitted payloads are labelled; counts refer to full collections. Recognized credential fields, Bearer values and PEM private keys are redacted from previews. These previews are held in the current browser session, not stored with flows or attached to public endpoint responses. `npm run test:inspection` checks these guarantees.
 
 ## Browser verification
 

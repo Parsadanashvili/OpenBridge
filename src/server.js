@@ -11,6 +11,7 @@ const docaudit = require('./docaudit/audit');
 const rulebook = require('./spec/rulebook');
 const evidence = require('./nbg/evidence');
 const studio = { store: require('./studio/store'), engine: require('./studio/engine'), conn: require('./studio/connections'), templates: require('./studio/templates').TEMPLATES };
+const history = require('./studio/history');
 // Role separation placeholder - NOT authentication. /nbg sets role=nbg, /studio sets role=tenant. Regulatory reporting is NBG-only.
 const roleOf = (req) => (/(?:^|;\s*)ob_role=(nbg|tenant)/.exec(req.headers.cookie || '') || [])[1] || 'nbg';
 const NBG_ONLY = [/^\/api\/reports\//, /^\/api\/evidence/, /^\/api\/run$/, /^\/api\/latest$/, /^\/api\/findings$/, /^\/api\/rulebook$/, /^\/api\/docaudit$/];
@@ -38,6 +39,22 @@ async function route(req, res) {
   if (p === '/studio') { const t = url.searchParams.get('tenant') || 'demo-tpp'; res.writeHead(302, { Location: `/studio.html?tenant=${encodeURIComponent(t)}`, 'Set-Cookie': 'ob_role=tenant; Path=/; SameSite=Lax' }); return res.end(); }
   // ---- Flow Studio API (tenant-scoped, no auth by design)
   let sm;
+  if ((sm = p.match(/^\/api\/studio\/([^/]+)\/flows\/([^/]+)\/executions(?:\/([^/]+))?$/))) {
+    const [, tenant, flowId, runId] = sm;
+    if (req.method !== 'GET') return json(res, 405, { error: 'method not allowed' });
+    if (!studio.store.ok(tenant) || !studio.store.ok(flowId)) return json(res, 400, { error: 'invalid history scope' });
+    if (!studio.store.getFlow(tenant, flowId)) return json(res, 404, { error: 'flow not found' });
+    if (!runId) return json(res, 200, { runs: history.list(tenant, flowId), retention: 20 });
+    const record = history.get(tenant, flowId, runId);
+    if (!record) return json(res, 404, { error: 'execution not found' });
+    const compareTo = url.searchParams.get('compareTo');
+    if (compareTo) {
+      const baseline = history.get(tenant, flowId, compareTo);
+      if (!baseline) return json(res, 404, { error: 'baseline execution not found' });
+      return json(res, 200, { ...record, comparison: history.compare(record, baseline) });
+    }
+    return json(res, 200, record);
+  }
   if (p === '/api/studio/templates') return json(res, 200, studio.templates);
   if (p === '/api/studio/banks') return json(res, 200, loadConfig().banks.map((b) => ({ id: b.id, name: b.name, simulated: !!b.simulated, enabled: b.enabled !== false })));
   if ((sm = p.match(/^\/api\/studio\/([^/]+)\/(flows|connections)(?:\/([^/]+))?(?:\/(run|publish|unpublish))?$/))) {
@@ -55,7 +72,15 @@ async function route(req, res) {
     if (req.method === 'PUT' && !action) { const b = await readBody(req); if (!b) return json(res, 400, { error: 'invalid JSON' }); delete b.published; try { return json(res, 200, studio.store.saveFlow(tenant, { ...b, id })); } catch (e) { return json(res, e.status || 500, { error: e.message }); } }
     if (!flow) return json(res, 404, { error: 'flow not found' });
     if (req.method === 'DELETE') { studio.store.deleteFlow(tenant, id); return json(res, 200, { deleted: id }); }
-    if (action === 'run') { const b = await readBody(req) || {}; try { return json(res, 200, await studio.engine.execute(b.flow || flow, { tenant, params: b.params || {}, psuIp: req.socket.remoteAddress })); } catch (e) { return json(res, e.status || 500, { error: e.message, ...(e.errors ? { errors: e.errors } : {}) }); } }
+    if (action === 'run') {
+      if (req.method !== 'POST') return json(res, 405, { error: 'method not allowed' });
+      const b = await readBody(req) || {}, executed = { ...(b.flow || flow), id }, startedAt = new Date().toISOString();
+      let result;
+      try { result = await studio.engine.execute(executed, { tenant, params: b.params || {}, psuIp: req.socket.remoteAddress, captureData: true }); }
+      catch (e) { history.save(tenant, executed, null, startedAt, e.message); return json(res, e.status || 500, { error: e.message, ...(e.errors ? { errors: e.errors } : {}) }); }
+      const record = history.save(tenant, executed, result, startedAt);
+      return json(res, 200, { ...result, executionId: record.id });
+    }
     if (action === 'publish') {
       const b = await readBody(req) || {}; const pth = String(b.path || flow.publishPath || flow.id).replace(/^\/+|\/+$/g, '');
       if (!studio.store.validPattern(pth)) return json(res, 400, { error: 'path: segments of a-z, 0-9, - or {param} (e.g. accounts/{accountId}/transactions)' });
