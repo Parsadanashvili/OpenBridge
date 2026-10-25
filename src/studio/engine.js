@@ -5,6 +5,7 @@
 const { call } = require('../auditor/http');
 const { validate } = require('../shared/validate');
 const conn = require('./connections');
+const { snapshot, outputPreview } = require('./inspection');
 
 // ---- path helper: "a.b[0].c", "balances[?balanceType=interimAvailable].balanceAmount.amount", "$.accounts", "@bank", "=CONST"
 function get(obj, p, meta = {}) {
@@ -28,7 +29,7 @@ const FN = {
   upper: (v) => (v == null ? null : String(v).toUpperCase()), lower: (v) => (v == null ? null : String(v).toLowerCase()),
   string: (v) => (v == null ? null : String(v)), abs: (v) => (v == null || isNaN(Number(v)) ? null : Math.abs(Number(v)).toFixed(2)),
 };
-const setPath = (o, p, v) => { const ks = p.split('.'); let c = o; ks.slice(0, -1).forEach((k) => { c = c[k] = c[k] || {}; }); c[ks.at(-1)] = v; };
+const setPath = (o, p, v) => { const ks = String(p || '').split('.'); if (ks.some((k) => !k || ['__proto__', 'prototype', 'constructor'].includes(k))) throw new Error('invalid output field path'); let c = o; ks.slice(0, -1).forEach((k) => { c = c[k] = Object.hasOwn(c, k) && c[k] && typeof c[k] === 'object' ? c[k] : {}; }); c[ks.at(-1)] = v; };
 
 // ---- trigger inputs: [{ name, type: string|number|integer|boolean|date|enum, required, default, values[], description }]
 // Legacy flows with config.params {k: default} are read as optional string inputs with those defaults.
@@ -139,7 +140,7 @@ function mapNode(node, inputs, missing) {
 }
 const cmp = (op, a, b) => ({ eq: a == b, ne: a != b, gt: Number(a) > Number(b), lt: Number(a) < Number(b), contains: String(a ?? '').includes(b), exists: a != null }[op]);
 
-async function execute(flow, { tenant, params: rawParams = {}, psuIp } = {}) {
+async function execute(flow, { tenant, params: rawParams = {}, psuIp, captureData = false } = {}) {
   const params = resolveInputs(inputSpec(flow), rawParams);
   const nodes = Object.fromEntries((flow.nodes || []).map((n) => [n.id, n.type === 'trigger' ? n : { ...n, config: interpolate(n.config || {}, params) }]));
   const edges = flow.edges || [];
@@ -149,11 +150,18 @@ async function execute(flow, { tenant, params: rawParams = {}, psuIp } = {}) {
   while (queue.length) { const k = queue.shift(); order.push(k); edges.filter((e) => e.from === k).forEach((e) => { if (--indeg[e.to] === 0) queue.push(e.to); }); }
   if (order.length !== Object.keys(nodes).length) throw Object.assign(new Error('flow has a cycle'), { status: 400 });
   const results = {}, trace = [], missing = [], ctx = { tenant, params, psuIp, warnings: [] };
+  const previewBudget = { remaining: 1024 * 1024 };
   let notFound = false;
   let response = null;
   for (const id of order) {
     const n = nodes[id], t0 = Date.now();
     const inputs = edges.filter((e) => e.to === id).map((e) => results[e.from]).filter(Boolean);
+    const inspection = captureData ? {
+      input: { sources: n.type === 'trigger'
+        ? [{ node: null, type: 'parameters', ...outputPreview({ data: params }, 'trigger', undefined, previewBudget) }]
+        : edges.filter((e) => e.to === id && results[e.from]).map((e) => ({ node: e.from, type: nodes[e.from].type, bank: results[e.from].meta?.bank, ...outputPreview(results[e.from], nodes[e.from].type, undefined, previewBudget) })) },
+      parameters: snapshot(n.config || {}, previewBudget),
+    } : undefined;
     const items = () => inputs.flatMap((i) => (Array.isArray(i.items) ? i.items : []));
     let r;
     try {
@@ -182,6 +190,13 @@ async function execute(flow, { tenant, params: rawParams = {}, psuIp } = {}) {
       }
       trace.push({ node: id, type: n.type, ok: !(r.meta && r.meta.status && r.meta.status !== 200), skipped: r.meta && r.meta.skipped, ms: Date.now() - t0, count: Array.isArray(r.items) ? r.items.length : undefined, status: r.meta && r.meta.status, sources: r.meta && r.meta.sources, issues: r.issues && r.issues.length });
     } catch (e) { trace.push({ node: id, type: n.type, ok: false, ms: Date.now() - t0, error: e.message }); r = { items: [] }; }
+    if (inspection) {
+      const entry = trace[trace.length - 1];
+      inspection.output = entry.error
+        ? { kind: 'error', count: 0, preview: snapshot({ error: entry.error }, previewBudget) }
+        : outputPreview(r, n.type, n.type === 'respond' ? response : undefined, previewBudget);
+      entry.inspection = inspection;
+    }
     results[id] = r;
   }
   const respondNode = order.map((k) => nodes[k]).find((n) => n.type === 'respond');
@@ -191,4 +206,16 @@ async function execute(flow, { tenant, params: rawParams = {}, psuIp } = {}) {
     trace,
   };
 }
-module.exports = { execute, get, FN, inputSpec, resolveInputs, interpolate };
+function previewMap(config, sources = [], params = {}) {
+  if (!Array.isArray(config?.fields) || config.fields.length > 100 || !Array.isArray(sources) || sources.length > 10) throw new Error('mapping preview supports up to 100 fields and 10 sources');
+  const budget = { remaining: 256 * 1024 }, missing = [];
+  const inputs = sources.map((source) => {
+    const value = snapshot(source.preview?.value, budget).value;
+    return { ...(source.kind === 'items' ? { items: value } : { data: value }), meta: { bank: source.bank } };
+  });
+  const resolved = interpolate(config, params);
+  const samples = inputs.map((input, i) => ({ node: sources[i].node, rows: (Array.isArray(input.items) ? input.items : get(input.data, resolved.path) || []).slice(0, 10) }));
+  const items = mapNode({ id: 'preview', config: resolved }, inputs, missing);
+  return { output: snapshot(items), missing: missing.slice(0, 100), samples: snapshot(samples).value, count: items.length };
+}
+module.exports = { execute, get, FN, inputSpec, resolveInputs, interpolate, previewMap };

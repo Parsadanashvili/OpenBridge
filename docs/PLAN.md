@@ -15,7 +15,7 @@ Not done: card-account services (mandatory in GE §9.4 - not built), payment ini
 
 ## Next, by owner
 - **Backend:** (1) build the 12 *planned* rules (see `docs/RULEBOOK.md`, status column); (2) get the organiser-confirmed standards edition and diff it against the rulebook; (3) first real-sandbox run once certificates/tokens exist (everything is wired: mTLS, JWS seal, TLS probe) - expect surprises, nothing has touched a real bank; (4) run history + drift: store runs by timestamp, diff two runs ("API change detection"); (5) read the unread parts: BG 1.3.9 full, GE XS2A §8/§9.4/§10.
-- **Frontend:** polish `public/index.html` (it's functional, ugly-ish); add run history + drift view; print-friendly report page (PDF via browser print).
+- **Frontend:** React migration, node inspection and persistent Studio execution history/comparison are implemented under `frontend/` (see `docs/FRONTEND.md`). Next: audit run history + drift view; print-friendly report page (PDF via browser print).
 - **AI/data:** prompt-tune `src/ai/explain.js` (output a corrected JSON snippet); add 2nd transform direction; add TBC-style vs BOG-style mapping variants if time.
 - **QA/lead:** run `npm test` after every change; incognito-test downloads; check no secrets in `out/`.
 - **Pitch:** script below.
