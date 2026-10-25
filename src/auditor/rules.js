@@ -1,0 +1,24 @@
+// Rule catalogue: stable IDs -> description, severity, interoperability impact, canned remediation.
+// The AI layer may only EXPLAIN these; pass/fail is decided deterministically in runner.js.
+const RULES = {
+  'CONF-STATUS': { sev: 'high', title: 'Unexpected HTTP status', impact: 'TPP client logic branching on status codes breaks.', fix: 'Return the status code defined by the profile for this operation.' },
+  'CONF-JSON': { sev: 'critical', title: 'Response is not valid JSON', impact: 'Client cannot parse the response at all.', fix: 'Return application/json with a valid body.' },
+  'CONF-REQUIRED': { sev: 'high', title: 'Mandatory field missing', impact: 'TPPs depending on the Georgian profile field cannot build a complete account record; manual per-bank handling needed.', fix: 'Populate the field in the response; the Georgian profile marks it mandatory for this operation.' },
+  'CONF-TYPE': { sev: 'high', title: 'Wrong data type', impact: 'Strict clients reject the payload or silently mis-parse monetary values.', fix: 'Serialise the value with the type required by the schema (amounts are decimal strings).' },
+  'CONF-FORMAT': { sev: 'medium', title: 'Invalid format / timestamp', impact: 'Date parsing differs per bank, forcing bank-specific parsers.', fix: 'Use ISO 8601 (YYYY-MM-DD for dates, RFC 3339 for date-times).' },
+  'CONF-ENUM': { sev: 'medium', title: 'Value outside allowed enumeration', impact: 'Status handling in clients fails on unknown/case-variant values.', fix: 'Use the exact enumeration values from the specification (case sensitive).' },
+  'CONF-BALTYPE': { sev: 'medium', title: 'Required balance type absent', impact: 'Available-funds checks cannot be performed uniformly across banks.', fix: 'Return both closingBooked and interimAvailable balances.' },
+  'CONF-ERRFMT': { sev: 'medium', title: 'Error body not in tppMessages format', impact: 'Generic error handling and retry logic cannot classify failures.', fix: 'Return {"tppMessages":[{"category","code","text"}]} for errors.' },
+  'CONF-INPUTVAL': { sev: 'medium', title: 'Invalid request accepted / required input not enforced', impact: 'TPPs cannot rely on 400 responses to discover malformed requests; the same request behaves differently per bank.', fix: 'Reject requests missing mandatory fields or with wrong types using 400 and a tppMessages error.' },
+  'CONF-HEADER': { sev: 'low', title: 'Required header handling', impact: 'Request tracing and correlation across TPP and bank logs breaks.', fix: 'Echo X-Request-ID in the response and reject requests without a valid one where the profile mandates it.' },
+  'CONF-PAGING': { sev: 'high', title: 'Pagination defect', impact: 'Duplicate or missing transactions when a TPP follows next links; balances reconstructed from history become wrong.', fix: 'Return each record exactly once across pages and keep a stable sort order; honour the documented page size.' },
+  'CONF-FILTER': { sev: 'medium', title: 'Query filter not honoured', impact: 'TPPs download more data than requested (privacy/data-minimisation concern) and post-filter client-side.', fix: 'Apply dateFrom/dateTo (and bookingStatus) filters server-side.' },
+  'CONF-BUSINESS': { sev: 'medium', title: 'Business-rule inconsistency', impact: 'Structurally valid data that is semantically wrong (e.g. currency mismatch) is silently mis-processed.', fix: 'Align balance/transaction currencies with the account currency and keep identifiers consistent.' },
+  'REL-ERRORS': { sev: 'medium', title: 'Server errors / timeouts during sampling', impact: 'Observed instability for TPP traffic during the test window (short run, not an uptime claim).', fix: 'Investigate 5xx causes on this endpoint; add retry guidance.' },
+  'SEC-UNAUTH': { sev: 'high', title: 'Unauthenticated request not rejected with 401', impact: 'Access-control behaviour differs from specification; clients cannot detect token expiry.', fix: 'Return 401 TOKEN_MISSING / TOKEN_INVALID for missing or bad bearer tokens.' },
+  'SEC-BADTOKEN': { sev: 'high', title: 'Invalid token accepted or wrongly rejected', impact: 'Authorization boundary unclear.', fix: 'Reject malformed bearer tokens with 401.' },
+  'SEC-CONSENT': { sev: 'high', title: 'Consent enforcement', impact: 'Data may be exposed without valid customer consent.', fix: 'Require a valid Consent-ID; return 401 CONSENT_EXPIRED / 400 for missing.' },
+  'SEC-HEADERS': { sev: 'low', title: 'Response hardening headers', impact: 'Sensitive financial responses may be cached; server version disclosure.', fix: 'Send Cache-Control: no-store; remove Server/X-Powered-By version banners.' },
+  'SEC-TLS': { sev: 'info', title: 'TLS / certificate validation', impact: 'Transport security of the endpoint.', fix: 'Serve over TLS 1.2+ with a valid certificate chain.' },
+};
+module.exports = { RULES };

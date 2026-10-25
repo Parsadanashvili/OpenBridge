@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+
+# generated output (audit runs, reports, synthetic datasets)
+out/
+
+# runtime data: Flow Studio tenants/connections (contain consent ids + tokens), NBG evidence
+data/
+
+# real bank material - never commit
+certs/
+.env
+.env.*
+*.key
+*.pem
+*.p12
+*.pfx
+# ...except the TEST-ONLY signing pair used by the simulators (public by design)
+!fixtures/test-signing/*.pem
+
+# logs / OS / editor
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp

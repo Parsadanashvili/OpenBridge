@@ -1,0 +1,78 @@
+{
+  "specId": "GE-XS2A-0.8.RC3",
+  "samples": 20,
+  "intervalMs": 100,
+  "timeoutMs": 3000,
+  "banks": [
+    {
+      "id": "alpha",
+      "name": "Alpha Bank (simulated)",
+      "simulated": true,
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:4101",
+      "tokenUrl": "http://127.0.0.1:4101/oauth/token",
+      "requiresJws": true,
+      "security": {
+        "signingKey": "fixtures/test-signing/key.pem",
+        "signingCert": "fixtures/test-signing/cert.pem"
+      }
+    },
+    {
+      "id": "beta",
+      "name": "Beta Bank (simulated)",
+      "simulated": true,
+      "enabled": true,
+      "baseUrl": "http://127.0.0.1:4102",
+      "tokenUrl": "http://127.0.0.1:4102/oauth/token",
+      "requiresJws": true,
+      "security": {
+        "signingKey": "fixtures/test-signing/key.pem",
+        "signingCert": "fixtures/test-signing/cert.pem"
+      }
+    },
+    {
+      "id": "tbc",
+      "name": "TBC Bank - legacy AIS sandbox",
+      "simulated": false,
+      "enabled": false,
+      "status": "configured, UNTESTED (no sandbox access yet)",
+      "baseUrl": "https://test-openbanking.tbcbank.ge",
+      "basePath": "/0.8/v1",
+      "headerProfile": "tbc",
+      "requiresJws": true,
+      "security": {
+        "clientCert": "certs/tbc/client.crt",
+        "clientKey": "certs/tbc/client.key",
+        "caCert": "certs/tbc/ca.crt",
+        "signingKey": "certs/tbc/signing.key",
+        "signingCert": "certs/tbc/signing.crt"
+      },
+      "docs": "TBC developer portal (AIS overview, certificate instructions); slides 21, 23, 54, 58"
+    },
+    {
+      "id": "bog",
+      "name": "Bank of Georgia - legacy AIS sandbox",
+      "simulated": false,
+      "enabled": false,
+      "status": "configured, UNTESTED (no sandbox access yet)",
+      "baseUrl": "https://xs2a-sandbox.bog.ge",
+      "basePath": "/0.8/v1",
+      "headerProfile": "bog",
+      "requiresJws": true,
+      "security": {
+        "clientCert": "certs/bog/client.crt",
+        "clientKey": "certs/bog/client.key",
+        "caCert": "certs/bog/ca.crt",
+        "signingKey": "certs/bog/signing.key",
+        "signingCert": "certs/bog/signing.crt"
+      },
+      "docs": "BOG NextGenPSD2 documentation; confirm client registration/certs with organisers (slides 54, 58)"
+    }
+  ],
+  "_how_to_enable_a_real_bank": [
+    "1. Put the test certificates under certs/<id>/ (gitignored): client.crt/key (mTLS), ca.crt, signing.key + signing.crt (JWS seal).",
+    "2. export OB_<ID>_ACCESS_TOKEN=... and OB_<ID>_CONSENT_ID=... after completing the bank's OAuth/SCA flow once by hand (optional: OB_<ID>_EXPIRED_CONSENT_ID).",
+    "3. set enabled:true. Anything that cannot run is reported as NOT RUN / not_assessed with the reason - never as a pass.",
+    "4. Request sealing (Georgian JWS profile 0.5.RC1) and response seal verification are implemented in src/shared/jws.js; the TLS/mTLS probe is in src/auditor/tls.js. All of it is tested against simulators only, not against a real bank."
+  ]
+}

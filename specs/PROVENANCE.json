@@ -1,0 +1,54 @@
+{
+  "retrievedAt": "2026-10-25T10:42:33.640Z",
+  "files": [
+    {
+      "bank": "bog",
+      "file": "bog/plugin-redoc-0.yaml",
+      "source": "https://api.bog.ge/docs/en/redocusaurus/plugin-redoc-0.yaml",
+      "sha256": "4622d76873a54262c119f071290187cac063b9999f0285fe623ffa3612f80ab0",
+      "bytes": 479623
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aisreadaccountlist.json",
+      "source": "https://developers.tbcbank.ge/reference/aisreadaccountlist",
+      "sha256": "5ffda20ce994a212982c4dabc2c09e90414d836d59c270987117ee379fa318cf",
+      "bytes": 22043
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aisreadaccountdetails.json",
+      "source": "https://developers.tbcbank.ge/reference/aisreadaccountdetails",
+      "sha256": "6b2d6f4e24878b0f444e92f5bd819f99ae1e8aee4870139f11a37df37fd002d2",
+      "bytes": 16368
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aisreadaccountbalance.json",
+      "source": "https://developers.tbcbank.ge/reference/aisreadaccountbalance",
+      "sha256": "d9e2915319b8bb4aea70aa4ebf5f7819172143d2d6187d39884ce1e0c4e11ca5",
+      "bytes": 14891
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aisreadaccounttransactionlist.json",
+      "source": "https://developers.tbcbank.ge/reference/aisreadaccounttransactionlist",
+      "sha256": "7a489526135de7f2245fa574453bd17a99adc6503cdb9bf02ea4ac58394c9e5a",
+      "bytes": 24491
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aiscreateconsent.json",
+      "source": "https://developers.tbcbank.ge/reference/aiscreateconsent",
+      "sha256": "7e2d28a74a04c528e7a02d5ea449ec3337d72efbf395e7d4988b8bac1050a309",
+      "bytes": 23747
+    },
+    {
+      "bank": "tbc",
+      "file": "tbc/aisoauthtoken.json",
+      "source": "https://developers.tbcbank.ge/reference/aisoauthtoken",
+      "sha256": "d2d8196672228ba5c8764ab2571a9f12c07efaef3ea266e486007592a1815247",
+      "bytes": 9312
+    }
+  ]
+}

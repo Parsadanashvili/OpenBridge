@@ -1,0 +1,21 @@
+{
+  "name": "openbridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenBridge AI - Open Banking interoperability & API quality auditor (hackathon MVP)",
+  "scripts": {
+    "start": "node src/server.js",
+    "audit": "node scripts/audit.js",
+    "test": "node scripts/selftest.js",
+    "dataset": "node scripts/dataset.js",
+    "docaudit": "node scripts/docaudit.js",
+    "fetch-specs": "node scripts/fetch-specs.js",
+    "rulebook": "node scripts/rulebook.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "yaml": "^2.5.1"
+  }
+}
